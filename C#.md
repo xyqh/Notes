@@ -44,3 +44,5 @@ C#
       1. FieldInfo right = type.GetField("...");
    5. 实例化：
       1. Object obj = Activator.CreateInstance(type);
+   
+4. C#和C++的区别
