@@ -648,7 +648,16 @@
 > mov ebp esp
 > ```
 >
-> ![img](https://pic002.cnblogs.com/images/2012/426620/2012072014393253.jpg)
+> | 高地址 | ...         |            |      |
+> | ------ | ----------- | ---------- | ---- |
+> |        | param3      | 0x0012FF30 |      |
+> |        | param2      | 0x0012FF2C |      |
+> |        | param1      | 0x0012FF28 |      |
+> |        | RET返回地址 | 0x0012FF24 |      |
+> |        | EBP         | 0x0012FF20 | EBP  |
+> |        | var1        | 0x0012FF1C |      |
+> |        | var2        | 0x0012FF18 |      |
+> | 低地址 | var3        | 0x0012FF14 | ESP  |
 >
 > **5.第5行开始执行， int var1 = param1; int var2 = param2; int var3 = param3;按申明顺序依次存储**。对应的汇编：
 >
