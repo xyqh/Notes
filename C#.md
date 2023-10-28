@@ -406,3 +406,40 @@
 > | 函数指针     | 没有                                                         | 有                                          |
 > | 装箱拆箱     | 有                                                           | 没有                                        |
 > | 速度         | 慢点，因为使用了很多重型库                                   | 快点，不使用重型库                          |
+
+### where关键字
+
+> where用于约束泛型。
+>
+> ```c#
+> public class MyGenericClass<T> where T:IComparable { }
+> ```
+>
+> 表示类型T必须实现IComparable接口
+>
+> ```c#
+> public class MyGenericClass <T> where T: IComparable, new()
+> ```
+>
+> new()只能出现在末尾，表示该类必须有公共的无参构造函数。
+>
+> .NET支持的类型参数约束有以下五种：
+>
+> where T : struct ---- T必须是一个值类型
+> where T : class ---- T必须是一个引用类型
+> where T : new() ---- T必须要有一个无参构造函数, (即他要求类型参数必须提供一个无参数的构造函数)
+> where T : NameOfBaseClass ---- T必须继承名为NameOfBaseClass的类
+> where T : NameOfInterface ---- T必须实现名为NameOfInterface的接口
+>
+> ```c#
+> public class MyClass<T,K,V,W,X>
+>         where T :struct           //约束T必须为值类型
+>         where K : class           //约束K必须为引用类型
+>         where V : IComparable     //约束V必须是实现了IComparable接口
+>         where W : K               //要求W必须是K类型，或者K类型的子类
+>         where X :class ,new ()    // X必须是引用类型，并且要有一个无参的构造函数（对于一个类型有多有约束，中间用逗号隔开）
+>  
+>     {
+>         ....
+>     }
+> ```
