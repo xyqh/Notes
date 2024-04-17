@@ -289,6 +289,10 @@
 
 ## UGUI
 
+### UGUI的检测机制
+
+> 射线检测。NGUI是碰撞检测。
+
 ### Image和RawImgae的区别
 
 > |          | Image          | RawImage |
@@ -388,6 +392,34 @@
 > 修改sharedMaterial会改变所有使用这个材质的物体的外观，并且也改变存储在工程里的材质设置。material只改变自身的。
 
 
+
+
+
+## 多线程
+
+### unity支持多线程吗
+
+> Unity支持多线程的使用，可以使用C#的[Thread类](https://so.csdn.net/so/search?q=Thread类&spm=1001.2101.3001.7020)来创建和管理线程，只需要引入：
+>
+> ```
+> using System.Threading;
+> ```
+>
+> 但需要注意的是，在Unity中，只有主线程（也称为渲染线程）可以访问Unity对象，如GameObject、Transform等，如果在其他线程中访问这些对象，会导致不可预期的结果。
+>
+> 因此，在使用多线程时，需要遵循一些规则：
+>
+> 不要在非主线程中访问Unity对象；
+>
+> 不要在多个线程中同时修改同一个对象或变量，否则可能会导致竞态条件；
+>
+> 不要过度使用多线程，因为线程切换会带来额外的开销，而且多线程可能会增加代码复杂性和调试难度；
+>
+> Unity中的多线程记得使用后要关闭，否则会在推出调试后一直运行，直到关闭Unity或者改变相应的脚本代码。
+
+### 协程卡死会影响主线程吗
+
+> 一般不会。但有特殊情况：https://blog.csdn.net/wodownload2/article/details/119143150
 
 
 
@@ -769,7 +801,7 @@
 >
 > #### UI图集
 >
-> > 图集就是碎图合成大图 降低内存，减少dc。
+> > 图集就是碎图合成大图 降低内存，减少drawcall。
 > >
 > > UI图集有合批没有的优点，就是热更新的时候因为小文件变少了，所以会快一些。
 > >
@@ -825,7 +857,7 @@
 >
 > > 将需要动的和不需要动的ui元素分别合并。原因是需要移动的ui元素会重构ui，动静分离可以减少cpu在重绘和合并时的消耗。
 
-#### 内存优化
+### 内存优化
 
 > 压缩自带类库;
 > 将暂时不用的以后还需要使用的物体隐藏起来而不是直接Destroy掉;
@@ -861,24 +893,58 @@
 
 
 
+## 渲染
+
+### 怎么让物体a渲染到物体b前面
+
+> Unity中的渲染顺序自上而下大致分为三层。 最高层为Camera层，可以在Camera的depth那里设置，设置之后，图形的渲染顺序就是先绘制depth低的相机下的物体，再绘制depth高的相机下的物体，也就是说，depth高的相机会覆盖depth低的相机（具体的覆盖关系有don't clear， solid color等等几种）
+>
+> 比Camera层稍低一层的是sorting layer层，随便找一个可以设置sorting layer的地方，选择sorting layer，点添加按钮，就可以看到当前所有的sorting layer，并且可以更改sorting layer的顺序，排位靠后的sorting layer会覆盖排位靠前的sorting layer。设置好sorting layer的相互关系之后，就可以给任何一个继承于Renderer类，或者有renderer的子类作为field的对象设置sorting layer了。注意这些sorting layer的遮挡关系是在同一个camera的层级下的。不同camera下的renderer渲染顺序以camera的depth为准。有的component的sorting layer可以直接在unity editor里面设置，比如Sprite Renderer。有的则需要用代码来设置，比如设置Particle system的sorting layer，就需要在代码中取到 ParticleSystem.Renderer.SortingLayer 来进行设置。
+>
+> 比sorting layer再低一层的是sorting order，这个数字指代的是在同一个sorting layer下的渲染顺序，用法很明显就不赘述了。
+>
+> 需要注意不要混淆的是gameobject的layer，和renderer的sorting layer。 gameObject的layer个人理解是一个逻辑上的分层，用于camera的culling mask等。而renderer的sorting layer则用于渲染。只有继承与renderer或者有renderer作为filed的component才需要设置sorting layer。
+>
+> 简单总结一下，决定Unity渲染关系的层级顺序是：
+>
+> - Camera
+> - sorting layer（create empty->add sprite render->Sorting Layer）
+> - sortingorder
+
+
+
 ## ShaderGraph
 
-| 接口              | 功能                      |
-| ----------------- | ------------------------- |
-| Normalize         | 归一化                    |
-| Step              | x>=edge时输出1，否则输出0 |
-| Saturate          | 把输入归一化到[0,1]       |
-| Lerp              | 插值                      |
-| Add               | 加法                      |
-| Subtract          | 减法                      |
-| Multiply          | 乘法                      |
-| Divide            | 除法                      |
-| One Minus         | 1-a                       |
-| Texture 2D Asset  | 导入texture资源           |
-| Sample Texture 2D | 将texture资源转为rgba     |
+### 常见节点
+
+| 节点              | 功能                                  |
+| ----------------- | ------------------------------------- |
+| Time              | 获取时间                              |
+| Normalize         | 归一化                                |
+| Step              | x>=edge时输出1，否则输出0             |
+| Saturate          | 把输入归一化到[0,1]                   |
+| Lerp              | 插值                                  |
+| Clamp             | 把输入值截取在一个区间（min<=x<=max） |
+| Add               | 加法                                  |
+| Subtract          | 减法                                  |
+| Multiply          | 乘法                                  |
+| Divide            | 除法                                  |
+| One Minus         | 1-a                                   |
+| Texture 2D Asset  | 导入texture资源                       |
+| Sample Texture 2D | 将texture资源转为rgba                 |
+| Tiling And Offest | 用于纹理的重复和偏移                  |
+| Simple Noise      | 简单噪点                              |
+| UV                | 获取对应通道UV数据                    |
+| Split             | 把结构体的数据一一拆分                |
+| Screen Color      | 屏幕上的颜色                          |
+| Screen Position   | 屏幕上的顶点位置                      |
+| Fraction          | 取小数部分                            |
+
+### 常见概念
 
 | 概念           | 解释       |
 | -------------- | ---------- |
 | Normal Vector  | 顶点法向量 |
 | Normal Map     | 法线贴图   |
 | View Direction | 相机方向   |
+
