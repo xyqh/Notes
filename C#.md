@@ -17,6 +17,10 @@
 > 3. 调用方式不同，重载使用相同对象以不同参数调用，重写用不同对象以相同参数调用
 > 4. 多态时机不同，重载是编译时多态，重写是运行时多态
 
+### abstract和virtual有什么区别
+
+> abstract不能有实现，virtual需要实现。
+
 ### 值类型和引用类型的区别
 
 > **值类型**：整型、浮点型、bool、char、struct、enum。继承自System.ValueType
@@ -32,6 +36,13 @@
 > | 参数传递         | 复制一份实例                       | 复制一份地址，指向同一实例             |
 > | ref和out         | 引用传递，改本身                   | 直接操作地址                           |
 >
+
+### const和readonly的区别
+
+> 1. const 在声明的时候进行初始化，即在 编译的时候就能确定该值（编译期静态解析的常量）， [readonly](https://so.csdn.net/so/search?q=readonly&spm=1001.2101.3001.7020) 既可以在声明的时候进行初始化，也可以在构造器中进行初始化（运行期动态解析的常量）。
+> 2. 修饰的类型不同 const 只能修饰数值（[Struct](https://so.csdn.net/so/search?q=Struct&spm=1001.2101.3001.7020) 类型除外 ，例如DateTimel）、字符串或引用类型的只能为null ；readonly 既可以修饰值类型(包括struct 类型) 也可以修饰引用类型(string ,null 或自定义类型)
+> 3. const 可以修饰类的字段和局部变量(方法体内的变量)；readOnly 只能修饰 类的字段，不能修饰局部变量。 但二者都不能修饰类属性成员和类成员方法。
+> 4. const隐含static，不可以再写static const；readonly则不默认static，如需要可以写static readonly；
 
 ### struct和class的区别
 
@@ -131,7 +142,7 @@
 
 ### 反射的实现原理
 
-> 在加载程序运行时，动态获取和加载程序集，并且可以获取到程序集的信息反射即在运行期动态获取类、对象、方法、对象数据等的一种重要手段，主要使用的类库：System.Reflection
+> 在加载程序运行时，动态获取和加载程序集，并且可以获取到程序集的信息。反射即在运行期动态获取类、对象、方法、对象数据等的一种重要手段，主要使用的类库：System.Reflection
 >
 > 核心类：
 >
