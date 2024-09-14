@@ -40,7 +40,7 @@
 ### const和readonly的区别
 
 > 1. const 在声明的时候进行初始化，即在 编译的时候就能确定该值（编译期静态解析的常量）， [readonly](https://so.csdn.net/so/search?q=readonly&spm=1001.2101.3001.7020) 既可以在声明的时候进行初始化，也可以在构造器中进行初始化（运行期动态解析的常量）。
-> 2. 修饰的类型不同 const 只能修饰数值（[Struct](https://so.csdn.net/so/search?q=Struct&spm=1001.2101.3001.7020) 类型除外 ，例如DateTimel）、字符串或引用类型的只能为null ；readonly 既可以修饰值类型(包括struct 类型) 也可以修饰引用类型(string ,null 或自定义类型)
+> 2. 修饰的类型不同 const 只能修饰数值（[Struct](https://so.csdn.net/so/search?q=Struct&spm=1001.2101.3001.7020) 类型除外 ，例如DateTime）、字符串或引用类型的只能为null ；readonly 既可以修饰值类型(包括struct 类型) 也可以修饰引用类型(string ,null 或自定义类型)
 > 3. const 可以修饰类的字段和局部变量(方法体内的变量)；readOnly 只能修饰 类的字段，不能修饰局部变量。 但二者都不能修饰类属性成员和类成员方法。
 > 4. const隐含static，不可以再写static const；readonly则不默认static，如需要可以写static readonly；
 

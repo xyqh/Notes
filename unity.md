@@ -236,7 +236,7 @@
 
 > - 关节动画：把角色分成若干独立部分，一个部分对应一个网格模型，部分的动画连接成一个整体的动画，角色比较灵活，Quake2中使用这种动画
 > - 骨骼动画：广泛应用的动画方式，集成了以上两个方式的有点，骨骼按角色特点组成一定的层次结构，有关节相连，可做相对运动，皮肤作为单一网格蒙在骨骼之外，决定角色的外观。
-> - 单一网格模型动画（关键帧动画）：由一个完整的网格模型构成，在动画序列的关键帧里记录各个顶点的原位置及其改变量，然后插值运算实现动画动过，角色动画较真实。
+> - 单一网格模型动画（关键帧动画）：由一个完整的网格模型构成，在动画序列的关键帧里记录各个顶点的原位置及其改变量，然后插值运算实现动画过程，角色动画较真实。
 
 ### 蒙皮如何跟着骨骼动
 
@@ -340,6 +340,15 @@
 ### 为什么mask会打断合批
 
 > 他在StencilMaterial.Add的时候为这个maskUI增加了一个新的材质，导致了mask内的物体无法和外部同样材质的物体合批，这是其一，其二是mask会进行两次pass，第一步是对在模板缓冲中的值进行赋值，将要显示的部分缓存值设置为1，不显示的部分设置为0，在第二个pass绘制时对模板缓冲值为0的部分进行剔除，所以这两个pass也会带来两个drawcall的生成。
+
+### Mask和RectMask2D的区别
+
+> |              | Mask               | RectMask2D |
+> | ------------ | ------------------ | ---------- |
+> | 增加drawcall | 2                  | 0          |
+> | 效果         | 可以处理不规则遮罩 | 只能做矩形 |
+> | 合批         | 多个Mask可以合批   | 不能合批   |
+> | 性能         | 差点               | 好点       |
 
 ### 怎么实现技能转圈效果
 
@@ -679,15 +688,30 @@
 >
 > 或者等场景切换的时候自动调用Resources.UnloadUnusedAssets。
 
+### ab包压缩格式区别
+
+> **LZMA压缩方式**
+>
+> BuildAssetBundleOptions.None 是一种默认的压缩形式，这种标准压缩格式是一个单一LZMA流序列化数据文件，并且在使用前需要解压缩整个包体。LZMA压缩是比较流行的压缩格式，能使压缩后文件达到最小，但是解压相对缓慢，导致加载时需要较长的解压时间。
+>
+> **LZ4压缩方式**
+>
+> BuildAssetBundleOptions.ChunkBasedCompression   Unity支持LZ4压缩，能使得压缩量更大，而且在使用资源包前不需要解压整个包体。LZ4压缩是一种“Chunk-based”算法，因此当对象从LZ4压缩包中加载时，只有这个对象的对应模块被解压即可，这速度更快，意味着不需要等待解压整个包体。LZ4压缩格式是在Unity5.3版本中开始引入的，之前的版本不可用。
+>
+> **不压缩的方式**
+>
+> BuildAssetBundleOptions.UncompressedAssetBundle  不压缩的方式打包后包体会很大，，导致很占用空间，但是一旦下载Assetbundle，访问非常快。不推荐这种方式打包，因为现在的加载功能做的很友好了，完全可以用加载界面来进行后台加载资源，而且时间也不长。
+>
+
 ### unity常用资源路径有哪些
 
 > ```c#
 > //获取的目录路径最后不包含/
 > //获得的文件目录最后包含/
-> Application.dataPath;//Asset文件夹的绝对路径
+> Application.dataPath;//Assets文件夹的绝对路径
 > 
 > Application.streamingAssetsPath;//只读，StreamingAssets的文件夹绝对路径
-> Application.persistentData;//可读写
+> Application.persistentDataPath;//可读写
 > 
 > //资源数据库（AssetDatabase）是允许您访问工程中的资源的API
 > AssetDatabase.GetAllAssetPaths;//获取所有的资源文件路径（不包含meta文件）
@@ -951,6 +975,22 @@
 > - sortingorder
 
 
+
+## Spine
+
+### spine导出文件有什么内容
+
+> *.atlas, *.skel/*.json, *.png
+
+### Spine绑骨换肤
+
+> BoneFollower/BoneFollowerGraphic
+>
+> skin替换
+
+### Spine怎么优化
+
+> [图形引擎实战：Spine动画性能优化-CSDN博客](https://blog.csdn.net/qq_41166022/article/details/136097129)
 
 
 
