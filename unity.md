@@ -317,25 +317,51 @@
 
 > - 屏幕空间-覆盖模式（Screen Space-Overlay）：Canvas创建出来后，默认就是该模式，该模式和摄像机无关，即使场景里没有摄像机，UI照样渲染。只有x轴和y轴，UI元素永远在3D元素的前面。
 > - 屏幕空间-摄像机模式（Screen Space-Camera）：设置成该模式后需要指定一个摄像机游戏物体，指定后UGUI就会自动出现在该摄像机的投射范围内，和NGUI的默认UI Root效果一致，如果隐藏掉摄像机，UGUI就无法渲染。
-> - 世界空间模式（World Spcae）：设置成该模式后，UGUI就相当于是场景内的一个普通的“Cube 游戏模型”，可以在场景内任意地移动UGUI元素的位置，通常用于怪物血条显示和VR开发。
+> - 世界空间模式（World Space）：设置成该模式后，UGUI就相当于是场景内的一个普通的“Cube 游戏模型”，可以在场景内任意地移动UGUI元素的位置，通常用于怪物血条显示和VR开发。
 
 ### UI的渲染顺序
 
 > 组件层级顺序、渲染顺序设置、Canvas排序层级、画布模式
 
-### UGUI层级计算原理
-
-> 同一个Canvas内，UGUI的层级计算方式：
->
-> 1. 一个UI元素，在它所占的屏幕范围内（通常是矩形），如果没有任何UI在它的底下，那么它的层级号就是0（最底下）；
-> 2. 如果一个UI在其底下且该UI可以和它合批，那它的层级号与底下的UI层级一样；
-> 3. 如果一个UI在其底下但是无法与它Batch，那它的层级号为底下的UI的层级+1；
-> 4. 如果有多个UI都在其下面，那么按前两种方式遍历计算所有的层级号，其中最大的那个作为自己的层级号。
-
 ### UGUI合批
 
-> 1. 纹理（图集）相同
-> 2. 层级连续
+> 两个UI控件能合批的基本条件是这两个控件使用的材质球(Shader)和贴图要完全相同。比如上面看到的，虽然Text和Image默认使用的材质球都是UI/Default，但是两者使用的贴图不同，所以注定Text和Image无法合批。材质和贴图相同这只是基本条件，还有其他规则。UGUI中完整的合批流程(规则)如下。
+>
+> 首先我们要明确UGUI中Canvas下可以嵌套子Canvas，但是合批是以Canvas(不包含子Canvas)为单位的(子Canvas会是另外一个批次了)。除此之外，合批的操作是在子线程完成的。
+>
+> - 既然合批是以Canvas为单位，第一步自然就是把所有Canvas给找出来，然后剔除掉不必渲染的Canvas(透明度为0，长宽为0，在RectMask2D控件下，且在RectMask2D的区域外)，然后计算Canvas下各UI控件的深度值Depth(需要注意的是Image的属性里面也有个depth，两者不是同一个东西)，Depth的计算规则如下：
+>
+> > 按照Hierarchy中从上往下的顺序依次遍历Canvas下所有UI元素
+> >
+> > 对于当前的UI元素CurrentUI
+> >
+> > 1. 如果CurrentUI不渲染，则Depth = -1
+> >
+> > 2. 如果CurrentUI要渲染，但CurrentUI下面没有其他UI元素与其相交，则Depth = 0
+> >
+> > 3. 如果CurrentUI要渲染，下面只有一个UI元素(LowerUI)与其相交，且CurrentUI与LowerUI可以合批(材质和贴图完全相同)，则CurrentUI.Depth = LowerUI.Depth；如果两者不能合批，CurrentUI.Depth= LowerUI.Depth + 1
+> >
+> > 4. 如果CurrentUI要渲染，下面有n个元素与其相交，则按照步骤iii，分别计算出n个Depth(Depth_1、Depth_2、Depth_3…)，然后CurrentUI.Depth取其最大值，即CurrentUI.Depth = max(Depth_1, Depth_2, Depth_3，…)
+> >
+> >    上面步骤中的“下面”和“相交”要明确下意思，这两个概念很重要。
+> >
+> >    CurrentUI下面的UI，指Hierarchy面板中，在CurrentUI之上的元素。
+>
+> 在计算相交时，由于要遍历所有UI元素和已计算的底层UI元素（平方复杂度），源码中使用分组计算包围盒矩形的方法加快计算，即16个UI元素为一组计算Group 网格Rect，检查是否与底层UI元素相交时，先计算是否与底层Group相交，如果相交再与Group中的元素做判定。
+>
+> - 各个UI的Depth计算完毕后，依次按照Depth、material ID、texture ID、RendererOrder（即UI层级队列顺序，即Hierarchy面板上的顺序）排序（条件的优先级依次递减，且均为从小到大排序）。然后剔除Depth = -1的UI元素，得到Batch前的UI 元素队列，这个队列被称之为VisiableList。
+>
+>   
+>
+>   上面这段话有些地方可能没太说清楚，解释一下排序：
+>
+>   先按Depth从小到大的顺序排序
+>
+>   Depth排完之后，Depth相同的元素再按material ID从小到大排序
+>
+>   material ID排完之后，material ID相同的元素再按texture ID从小到大排序
+>
+>   texture ID排完之后，texture ID相同的元素最后再按在Hierarchy上的顺序排序(Hierarchy越上面的越在队列前面)
 
 ### 为什么mask会打断合批
 
@@ -343,12 +369,13 @@
 
 ### Mask和RectMask2D的区别
 
-> |              | Mask               | RectMask2D |
-> | ------------ | ------------------ | ---------- |
-> | 增加drawcall | 2                  | 0          |
-> | 效果         | 可以处理不规则遮罩 | 只能做矩形 |
-> | 合批         | 多个Mask可以合批   | 不能合批   |
-> | 性能         | 差点               | 好点       |
+> |              | Mask                                                     | RectMask2D                                                   |
+> | ------------ | -------------------------------------------------------- | ------------------------------------------------------------ |
+> | 增加drawcall | 3                                                        | 1                                                            |
+> | 效果         | 可以处理不规则遮罩                                       | 只能做矩形                                                   |
+> | 合批         | 多个Mask之间可以合批（但是mask层级不连续则不能合批，）   | 多个RectMask2D之间不能合批                                   |
+> | 性能         | 差点                                                     | 好点                                                         |
+> | 实现方式     | 增加了新的材质，且会进行2次pass（模板缓冲赋值+模板剔除） | 没有替换材质，也没有模板缓冲，而是通过canvasRender进行了ClipRect的剔除 |
 
 ### 怎么实现技能转圈效果
 
@@ -987,6 +1014,8 @@
 > BoneFollower/BoneFollowerGraphic
 >
 > skin替换
+>
+> [【Unity&Spine】物体跟随骨骼 BoneFollower - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/408151248)
 
 ### Spine怎么优化
 
